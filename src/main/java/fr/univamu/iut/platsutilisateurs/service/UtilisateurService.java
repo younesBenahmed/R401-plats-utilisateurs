@@ -47,14 +47,14 @@ public class UtilisateurService implements UtilisateurUseCaseInterface {
 
     @Override
     public Utilisateur createUtilisateur(Utilisateur utilisateur) {
-        return utilisateurRepo.createUtilisateur(utilisateur.nom, utilisateur.prenom,
-                utilisateur.email, utilisateur.adresse);
+        return utilisateurRepo.createUtilisateur(utilisateur.getNom(), utilisateur.getPrenom(),
+                utilisateur.getEmail(), utilisateur.getAdresse());
     }
 
     @Override
     public String updateUtilisateur(int id, Utilisateur utilisateur) {
-        boolean updated = utilisateurRepo.updateUtilisateur(id, utilisateur.nom, utilisateur.prenom,
-                utilisateur.email, utilisateur.adresse);
+        boolean updated = utilisateurRepo.updateUtilisateur(id, utilisateur.getNom(), utilisateur.getPrenom(),
+                utilisateur.getEmail(), utilisateur.getAdresse());
         if (!updated) return null;
         return getUtilisateurJSON(id);
     }

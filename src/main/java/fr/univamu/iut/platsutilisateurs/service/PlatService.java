@@ -47,12 +47,12 @@ public class PlatService implements PlatUseCaseInterface {
 
     @Override
     public Plat createPlat(Plat plat) {
-        return platRepo.createPlat(plat.nom, plat.description, plat.prix);
+        return platRepo.createPlat(plat.getNom(), plat.getDescription(), plat.getPrix());
     }
 
     @Override
     public String updatePlat(int id, Plat plat) {
-        boolean updated = platRepo.updatePlat(id, plat.nom, plat.description, plat.prix);
+        boolean updated = platRepo.updatePlat(id, plat.getNom(), plat.getDescription(), plat.getPrix());
         if (!updated) return null;
         return getPlatJSON(id);
     }
