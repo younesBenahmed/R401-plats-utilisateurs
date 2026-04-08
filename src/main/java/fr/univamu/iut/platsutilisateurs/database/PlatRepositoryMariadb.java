@@ -1,49 +1,42 @@
-package fr.univamu.iut.platsutilisateurs.plat;
+package fr.univamu.iut.platsutilisateurs.database;
+
+import fr.univamu.iut.platsutilisateurs.domain.Plat;
+import fr.univamu.iut.platsutilisateurs.service.PlatRepositoryInterface;
 
 import java.io.Closeable;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 
 /**
- * Classe permettant d'acceder aux plats stockes dans une base de donnees MariaDB
+ * Implementation du Gateway d'acces aux plats via MariaDB
+ * Couche : Frameworks and Drivers (couche externe)
+ * Implemente PlatRepositoryInterface (defini dans la couche service)
+ * La connexion SQL est partagee et injectee par CDI (PlatsUtilisateursApplication)
  */
 public class PlatRepositoryMariadb implements PlatRepositoryInterface, Closeable {
 
-    /**
-     * Acces a la base de donnees (session)
-     */
     protected Connection dbConnection;
 
-    /**
-     * Constructeur de la classe
-     * @param infoConnection chaine de caracteres avec les informations de connexion
-     * @param user chaine de caracteres contenant l'identifiant de connexion
-     * @param pwd chaine de caracteres contenant le mot de passe
-     */
-    public PlatRepositoryMariadb(String infoConnection, String user, String pwd)
-            throws SQLException, ClassNotFoundException {
-        Class.forName("org.mariadb.jdbc.Driver");
-        dbConnection = DriverManager.getConnection(infoConnection, user, pwd);
+    public PlatRepositoryMariadb(Connection connection) {
+        this.dbConnection = connection;
     }
 
     @Override
     public void close() {
-        try {
-            dbConnection.close();
-        } catch (SQLException e) {
-            System.err.println(e.getMessage());
-        }
+        // La connexion est geree par CDI (PlatsUtilisateursApplication)
     }
 
     @Override
     public Plat getPlat(int id) {
         Plat selectedPlat = null;
         String query = "SELECT * FROM Plat WHERE id=?";
-
         try (PreparedStatement ps = dbConnection.prepareStatement(query)) {
             ps.setInt(1, id);
             ResultSet result = ps.executeQuery();
-
             if (result.next()) {
                 String nom = result.getString("nom");
                 String description = result.getString("description");
@@ -60,11 +53,9 @@ public class PlatRepositoryMariadb implements PlatRepositoryInterface, Closeable
     public ArrayList<Plat> getAllPlats() {
         ArrayList<Plat> listPlats;
         String query = "SELECT * FROM Plat";
-
         try (PreparedStatement ps = dbConnection.prepareStatement(query)) {
             ResultSet result = ps.executeQuery();
             listPlats = new ArrayList<>();
-
             while (result.next()) {
                 int id = result.getInt("id");
                 String nom = result.getString("nom");
@@ -82,18 +73,15 @@ public class PlatRepositoryMariadb implements PlatRepositoryInterface, Closeable
     public Plat createPlat(String nom, String description, double prix) {
         String query = "INSERT INTO Plat (nom, description, prix) VALUES (?, ?, ?)";
         Plat createdPlat = null;
-
         try (PreparedStatement ps = dbConnection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, nom);
             ps.setString(2, description);
             ps.setDouble(3, prix);
             int nbRowModified = ps.executeUpdate();
-
             if (nbRowModified != 0) {
                 ResultSet generatedKeys = ps.getGeneratedKeys();
                 if (generatedKeys.next()) {
-                    int generatedId = generatedKeys.getInt(1);
-                    createdPlat = new Plat(generatedId, nom, description, prix);
+                    createdPlat = new Plat(generatedKeys.getInt(1), nom, description, prix);
                 }
             }
         } catch (SQLException e) {
@@ -106,7 +94,6 @@ public class PlatRepositoryMariadb implements PlatRepositoryInterface, Closeable
     public boolean updatePlat(int id, String nom, String description, double prix) {
         String query = "UPDATE Plat SET nom=?, description=?, prix=? WHERE id=?";
         int nbRowModified = 0;
-
         try (PreparedStatement ps = dbConnection.prepareStatement(query)) {
             ps.setString(1, nom);
             ps.setString(2, description);
@@ -123,7 +110,6 @@ public class PlatRepositoryMariadb implements PlatRepositoryInterface, Closeable
     public boolean deletePlat(int id) {
         String query = "DELETE FROM Plat WHERE id=?";
         int nbRowModified = 0;
-
         try (PreparedStatement ps = dbConnection.prepareStatement(query)) {
             ps.setInt(1, id);
             nbRowModified = ps.executeUpdate();

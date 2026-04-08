@@ -1,9 +1,13 @@
 package fr.univamu.iut.platsutilisateurs;
 
-import fr.univamu.iut.platsutilisateurs.plat.PlatRepositoryInterface;
-import fr.univamu.iut.platsutilisateurs.plat.PlatRepositoryMariadb;
-import fr.univamu.iut.platsutilisateurs.utilisateur.UtilisateurRepositoryInterface;
-import fr.univamu.iut.platsutilisateurs.utilisateur.UtilisateurRepositoryMariadb;
+import fr.univamu.iut.platsutilisateurs.database.PlatRepositoryMariadb;
+import fr.univamu.iut.platsutilisateurs.database.UtilisateurRepositoryMariadb;
+import fr.univamu.iut.platsutilisateurs.service.PlatRepositoryInterface;
+import fr.univamu.iut.platsutilisateurs.service.PlatService;
+import fr.univamu.iut.platsutilisateurs.service.PlatUseCaseInterface;
+import fr.univamu.iut.platsutilisateurs.service.UtilisateurRepositoryInterface;
+import fr.univamu.iut.platsutilisateurs.service.UtilisateurService;
+import fr.univamu.iut.platsutilisateurs.service.UtilisateurUseCaseInterface;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Disposes;
@@ -13,28 +17,23 @@ import jakarta.ws.rs.core.Application;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Properties;
 
 /**
- * Classe d'application JAX-RS pour l'API Plats et Utilisateurs
+ * Composant principal Main de l'application
+ * Couche : Frameworks and Drivers (couche la plus externe)
+ * Lance et coordonne l'execution des autres composants via CDI
+ * Cree les objets necessaires et les injecte dans les composants de haut niveau
  */
 @ApplicationPath("/api")
 @ApplicationScoped
 public class PlatsUtilisateursApplication extends Application {
 
-    /**
-     * URL de connexion a la base de donnees
-     */
     private static final String DB_URL;
-
-    /**
-     * Identifiant de connexion a la base de donnees
-     */
     private static final String DB_USER;
-
-    /**
-     * Mot de passe de connexion a la base de donnees
-     */
     private static final String DB_PWD;
 
     static {
@@ -55,50 +54,60 @@ public class PlatsUtilisateursApplication extends Application {
     }
 
     /**
-     * Methode appelee par l'API CDI pour injecter la connexion aux plats
-     * @return un objet implementant PlatRepositoryInterface
+     * Produit la connexion SQL unique partagee entre les deux repositories
      */
     @Produces
-    private PlatRepositoryInterface openPlatDbConnection() {
-        PlatRepositoryMariadb db = null;
+    @ApplicationScoped
+    private Connection openDbConnection() {
         try {
-            db = new PlatRepositoryMariadb(DB_URL, DB_USER, DB_PWD);
+            Class.forName("org.mariadb.jdbc.Driver");
+            return DriverManager.getConnection(DB_URL, DB_USER, DB_PWD);
         } catch (Exception e) {
-            System.err.println("ERREUR CONNEXION PLAT: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("ERREUR CONNEXION: " + e.getMessage());
+            return null;
         }
-        return db;
     }
 
     /**
-     * Methode permettant de fermer la connexion plats
-     * @param platRepo la connexion a fermer
+     * Ferme la connexion SQL quand l'application s'arrete
      */
-    private void closePlatDbConnection(@Disposes PlatRepositoryInterface platRepo) {
-        platRepo.close();
+    private void closeDbConnection(@Disposes Connection connection) {
+        try {
+            connection.close();
+        } catch (SQLException e) {
+            System.err.println(e.getMessage());
+        }
     }
 
     /**
-     * Methode appelee par l'API CDI pour injecter la connexion aux utilisateurs
-     * @return un objet implementant UtilisateurRepositoryInterface
+     * Produit le Gateway Plat (couche database) en injectant la connexion partagee
      */
     @Produces
-    private UtilisateurRepositoryInterface openUtilisateurDbConnection() {
-        UtilisateurRepositoryMariadb db = null;
-        try {
-            db = new UtilisateurRepositoryMariadb(DB_URL, DB_USER, DB_PWD);
-        } catch (Exception e) {
-            System.err.println("ERREUR CONNEXION UTILISATEUR: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return db;
+    private PlatRepositoryInterface getPlatRepository(Connection connection) {
+        return new PlatRepositoryMariadb(connection);
     }
 
     /**
-     * Methode permettant de fermer la connexion utilisateurs
-     * @param utilisateurRepo la connexion a fermer
+     * Produit le Gateway Utilisateur (couche database) en injectant la connexion partagee
      */
-    private void closeUtilisateurDbConnection(@Disposes UtilisateurRepositoryInterface utilisateurRepo) {
-        utilisateurRepo.close();
+    @Produces
+    private UtilisateurRepositoryInterface getUtilisateurRepository(Connection connection) {
+        return new UtilisateurRepositoryMariadb(connection);
+    }
+
+    /**
+     * Produit l'Interactor Plat via son Use Case Input Port
+     */
+    @Produces
+    private PlatUseCaseInterface getPlatService(PlatRepositoryInterface platRepo) {
+        return new PlatService(platRepo);
+    }
+
+    /**
+     * Produit l'Interactor Utilisateur via son Use Case Input Port
+     */
+    @Produces
+    private UtilisateurUseCaseInterface getUtilisateurService(UtilisateurRepositoryInterface utilisateurRepo) {
+        return new UtilisateurService(utilisateurRepo);
     }
 }
