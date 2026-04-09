@@ -1,129 +1,138 @@
 # Diagramme de classes
 
-```mermaid
-classDiagram
-    namespace domain {
-        class Plat {
-            <<Entité>>
-            #int id
-            #String nom
-            #String description
-            #double prix
-        }
-        class Utilisateur {
-            <<Entité>>
-            #int id
-            #String nom
-            #String prenom
-            #String email
-            #String adresse
-        }
+```plantuml
+@startuml diagramme_classes
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+skinparam class {
+    BackgroundColor<<entity>>    LightYellow
+    BorderColor<<entity>>        Goldenrod
+    BackgroundColor<<usecase>>   MistyRose
+    BorderColor<<usecase>>       IndianRed
+    BackgroundColor<<adapter>>   Honeydew
+    BorderColor<<adapter>>       SeaGreen
+    BackgroundColor<<framework>> LightSteelBlue
+    BorderColor<<framework>>     SteelBlue
+}
+
+skinparam interface {
+    BackgroundColor<<usecase>>  MistyRose
+    BorderColor<<usecase>>      IndianRed
+    BackgroundColor<<adapter>>  Honeydew
+    BorderColor<<adapter>>      SeaGreen
+}
+
+package "domain" #LightYellow {
+    class Plat <<entity>> {
+        # id : int
+        # nom : String
+        # description : String
+        # prix : double
     }
-
-    namespace service {
-        class PlatUseCaseInterface {
-            <<interface>>
-            +getAllPlatsJSON() String
-            +getPlatJSON(int id) String
-            +createPlat(Plat plat) Plat
-            +updatePlat(int id, Plat plat) String
-            +deletePlat(int id) boolean
-        }
-        class PlatService {
-            #PlatRepositoryInterface platRepo
-        }
-        class PlatRepositoryInterface {
-            <<interface>>
-            +close()
-            +getPlat(int id) Plat
-            +getAllPlats() ArrayList~Plat~
-            +createPlat(String nom, String description, double prix) Plat
-            +updatePlat(int id, String nom, String description, double prix) boolean
-            +deletePlat(int id) boolean
-        }
-        class UtilisateurUseCaseInterface {
-            <<interface>>
-            +getAllUtilisateursJSON() String
-            +getUtilisateurJSON(int id) String
-            +createUtilisateur(Utilisateur u) Utilisateur
-            +updateUtilisateur(int id, Utilisateur u) String
-            +deleteUtilisateur(int id) boolean
-        }
-        class UtilisateurService {
-            #UtilisateurRepositoryInterface utilisateurRepo
-        }
-        class UtilisateurRepositoryInterface {
-            <<interface>>
-            +close()
-            +getUtilisateur(int id) Utilisateur
-            +getAllUtilisateurs() ArrayList~Utilisateur~
-            +createUtilisateur(String nom, String prenom, String email, String adresse) Utilisateur
-            +updateUtilisateur(int id, String nom, String prenom, String email, String adresse) boolean
-            +deleteUtilisateur(int id) boolean
-        }
+    class Utilisateur <<entity>> {
+        # id : int
+        # nom : String
+        # prenom : String
+        # email : String
+        # adresse : String
     }
+}
 
-    namespace ui {
-        class PlatResource {
-            -PlatUseCaseInterface service
-        }
-        class UtilisateurResource {
-            -UtilisateurUseCaseInterface service
-        }
+package "service" #MistyRose {
+    interface PlatUseCaseInterface <<I>> <<usecase>> {
+        + getAllPlatsJSON() : String
+        + getPlatJSON(id : int) : String
+        + createPlat(plat : Plat) : Plat
+        + updatePlat(id : int, plat : Plat) : String
+        + deletePlat(id : int) : boolean
     }
-
-    namespace database {
-        class PlatRepositoryMariadb {
-            #Connection dbConnection
-        }
-        class UtilisateurRepositoryMariadb {
-            #Connection dbConnection
-        }
+    class PlatService <<usecase>> {
+        # platRepo : PlatRepositoryInterface
     }
-
-    class PlatsUtilisateursApplication {
-        +openDbConnection() Connection
-        +getPlatService() PlatUseCaseInterface
-        +getUtilisateurService() UtilisateurUseCaseInterface
+    interface PlatRepositoryInterface <<I>> <<usecase>> {
+        + close()
+        + getPlat(id : int) : Plat
+        + getAllPlats() : ArrayList<Plat>
+        + createPlat(...) : Plat
+        + updatePlat(...) : boolean
+        + deletePlat(id : int) : boolean
     }
+    interface UtilisateurUseCaseInterface <<I>> <<usecase>> {
+        + getAllUtilisateursJSON() : String
+        + getUtilisateurJSON(id : int) : String
+        + createUtilisateur(u : Utilisateur) : Utilisateur
+        + updateUtilisateur(id : int, u : Utilisateur) : String
+        + deleteUtilisateur(id : int) : boolean
+    }
+    class UtilisateurService <<usecase>> {
+        # utilisateurRepo : UtilisateurRepositoryInterface
+    }
+    interface UtilisateurRepositoryInterface <<I>> <<usecase>> {
+        + close()
+        + getUtilisateur(id : int) : Utilisateur
+        + getAllUtilisateurs() : ArrayList<Utilisateur>
+        + createUtilisateur(...) : Utilisateur
+        + updateUtilisateur(...) : boolean
+        + deleteUtilisateur(id : int) : boolean
+    }
+}
 
-    PlatUseCaseInterface     <|..  PlatService                 : est un
-    PlatResource             ..>   PlatUseCaseInterface        : utilise
-    PlatService              ..>   PlatRepositoryInterface     : utilise
-    PlatService              ..>   Plat                        : utilise
-    PlatRepositoryInterface  <|..  PlatRepositoryMariadb       : est un
-    PlatRepositoryMariadb    ..>   Plat                        : utilise
+package "ui" #Honeydew {
+    class PlatResource <<adapter>> {
+        - service : PlatUseCaseInterface
+    }
+    class UtilisateurResource <<adapter>> {
+        - service : UtilisateurUseCaseInterface
+    }
+}
 
-    UtilisateurUseCaseInterface     <|..  UtilisateurService                : est un
-    UtilisateurResource             ..>   UtilisateurUseCaseInterface       : utilise
-    UtilisateurService              ..>   UtilisateurRepositoryInterface    : utilise
-    UtilisateurService              ..>   Utilisateur                       : utilise
-    UtilisateurRepositoryInterface  <|..  UtilisateurRepositoryMariadb      : est un
-    UtilisateurRepositoryMariadb    ..>   Utilisateur                       : utilise
+package "database" #LightSteelBlue {
+    class PlatRepositoryMariadb <<framework>> {
+        # dbConnection : Connection
+    }
+    class UtilisateurRepositoryMariadb <<framework>> {
+        # dbConnection : Connection
+    }
+}
 
-    PlatsUtilisateursApplication ..> PlatRepositoryMariadb        : cree
-    PlatsUtilisateursApplication ..> UtilisateurRepositoryMariadb : cree
-    PlatsUtilisateursApplication ..> PlatService                  : cree
-    PlatsUtilisateursApplication ..> UtilisateurService           : cree
+class PlatsUtilisateursApplication <<framework>> #LightSteelBlue {
+    - openDbConnection() : Connection
+    - closeDbConnection(connection : Connection)
+    - getPlatRepository(connection : Connection) : PlatRepositoryInterface
+    - getUtilisateurRepository(connection : Connection) : UtilisateurRepositoryInterface
+    - getPlatService(platRepo : PlatRepositoryInterface) : PlatUseCaseInterface
+    - getUtilisateurService(utilisateurRepo : UtilisateurRepositoryInterface) : UtilisateurUseCaseInterface
+}
 
-    classDef entity    fill:#fffacd,stroke:#daa520,color:#000
-    classDef usecase   fill:#ffe4e1,stroke:#cd5c5c,color:#000
-    classDef adapter   fill:#f0fff0,stroke:#2e8b57,color:#000
-    classDef framework fill:#b0c4de,stroke:#4682b4,color:#000
+' ── Relations Plat ──────────────────────────────────────
 
-    class Plat:::entity
-    class Utilisateur:::entity
-    class PlatUseCaseInterface:::usecase
-    class PlatService:::usecase
-    class UtilisateurUseCaseInterface:::usecase
-    class UtilisateurService:::usecase
-    class PlatRepositoryInterface:::adapter
-    class UtilisateurRepositoryInterface:::adapter
-    class PlatResource:::adapter
-    class UtilisateurResource:::adapter
-    class PlatRepositoryMariadb:::framework
-    class UtilisateurRepositoryMariadb:::framework
-    class PlatsUtilisateursApplication:::framework
+PlatResource          ..>  PlatUseCaseInterface     : utilise
+PlatService           ..|> PlatUseCaseInterface     : est un
+PlatService           ..>  PlatRepositoryInterface  : utilise
+PlatService           ..>  Plat                     : utilise
+PlatRepositoryMariadb ..|> PlatRepositoryInterface  : est un
+PlatRepositoryMariadb ..>  Plat                     : utilise
+
+' ── Relations Utilisateur ───────────────────────────────
+
+UtilisateurResource          ..>  UtilisateurUseCaseInterface    : utilise
+UtilisateurService           ..|> UtilisateurUseCaseInterface    : est un
+UtilisateurService           ..>  UtilisateurRepositoryInterface : utilise
+UtilisateurService           ..>  Utilisateur                    : utilise
+UtilisateurRepositoryMariadb ..|> UtilisateurRepositoryInterface : est un
+UtilisateurRepositoryMariadb ..>  Utilisateur                    : utilise
+
+' ── Main ────────────────────────────────────────────────
+
+PlatsUtilisateursApplication ..> PlatRepositoryMariadb         : cree
+PlatsUtilisateursApplication ..> UtilisateurRepositoryMariadb  : cree
+PlatsUtilisateursApplication ..> PlatService                   : cree
+PlatsUtilisateursApplication ..> UtilisateurService            : cree
+
+@enduml
 ```
 
 Les interfaces UseCase (PlatUseCaseInterface, UtilisateurUseCaseInterface) dans la couche ui ne sont pas obligatoires, on pourrait directement utiliser PlatService et UtilisateurService. On les a mises pour respecter le cours et avoir une architecture plus propre, comme ca si on change l'implementation du service, le controller n'est pas impacte.
